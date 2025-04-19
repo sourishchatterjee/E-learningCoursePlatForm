@@ -17,7 +17,6 @@ class userController{
                 name: 'required|string|minLength:3',
                 email: 'required|email',
                 password: 'required|string|minLength:6',
-                image:'required'
 
               });
             
@@ -25,6 +24,9 @@ class userController{
             
               if (!matched) {
                 return res.status(422).json({ errors: v.errors });
+              }
+              if (!req.file || !req.file.path) {
+                return res.status(400).json({ message: 'Image is required' });
               }
             
               const { name, email, password} = req.body;
