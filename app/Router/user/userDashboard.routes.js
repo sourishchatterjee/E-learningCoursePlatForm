@@ -1,6 +1,6 @@
 const express=require('express');
 const router=express.Router();
-const userdashboardController = require('../../Module/userAuth/controller/dashboardController');
+const userdashboardController = require('../../Module/userAuth/controller/dashboardContoller');
 const {AuthCheck} = require('../../Middleware/userAuth');
 
 
