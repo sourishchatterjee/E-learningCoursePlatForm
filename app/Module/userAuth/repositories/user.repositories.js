@@ -30,9 +30,9 @@ class userRepository {
         return await User.findByIdAndUpdate(id,data);
       }
 
-      async updateisDelete(id){
+      async updateisDelete(email){
         try{
-            return await User.findByIdAndUpdate(id,{
+            return await User.findOneAndUpdate({email},{
                 isDeleted: true
             })
         }catch(err){

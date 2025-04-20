@@ -17,7 +17,7 @@ class userController{
                 name: 'required|string|minLength:3',
                 email: 'required|email',
                 password: 'required|string|minLength:6',
-
+              
               });
             
               const matched = await v.check();
@@ -25,10 +25,10 @@ class userController{
               if (!matched) {
                 return res.status(422).json({ errors: v.errors });
               }
+            
               if (!req.file || !req.file.path) {
                 return res.status(400).json({ message: 'Image is required' });
               }
-            
               const { name, email, password} = req.body;
             
               try {
@@ -130,6 +130,7 @@ class userController{
                 name: existUser.name,
                 email: existUser.email,
                 image: existUser.image,
+                isDeleted:existUser.isDeleted,
             }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
             // Send the token in response
@@ -137,6 +138,7 @@ class userController{
             return res.status(200).json({
                 message: "User login successful!",
                 token,
+                existUser
             });
 
         } catch (err) {
@@ -163,20 +165,22 @@ class userController{
             if (!matched) {
                 return res.status(400).json({ errors: v.errors });
             }
-            const id = req.params.id;
+            const id = req.user.id;
+            console.log((id));
+            
             const findUser=await userRepositories.findUserById(id);
             if(!findUser){
                 return res.status(404).json({ message: "User not found" });
             }
-
+            
             let image = findUser.image; 
             if (req.file) {
                 image = req.file.path; 
             }
-            const{name}=req.body;
-            if(name==findUser.name && !req.file){
+            const{name}=req.body;            
+            if(name===findUser.name && !req.file){
                 return res.status(400).json({
-                    message:"No data is availabe to upadate"
+                    message:"No data is detected to upadate"
                 })
             }
             const updateData = {name}
@@ -211,22 +215,16 @@ class userController{
             if (!matched) {
                 return res.status(400).json({ errors: v.errors });
             }
-
-            const id = req.params.id;
-            const findUser=await userRepositories.findUserById(id);
-            if(!findUser){
-                return res.status(404).json({ message: "User not found" });
-            }
             
             const { email } = req.body;
 
             const matcEmail=await userRepositories.findUserByEmail(email);
-            if(!matcEmail){
-                return res.status(409).json({ message: 'Invalid email' });
+            if(!matcEmail || matcEmail.isDeleted==true){
+                return res.status(409).json({ message: 'User is not exist!!' });
             }
            
 
-            const updateuser = await userRepositories.updateisDelete(id);
+            const updateuser = await userRepositories.updateisDelete(email);
 
             if(updateuser){
                 res.clearCookie('userToken');
@@ -248,61 +246,53 @@ class userController{
     // changed password
     async changePassword(req, res) {
         try {
-
             const v = new Validator(req.body, {
-                email: 'required|email',
-                password: 'required|minLength:6',
-                confirm_password: "required|minLength:6|same:password"
+              currentPassword: 'required|string|minLength:6',
+              newPassword: 'required|string|minLength:6',
+              confirm_Newpassword: 'required|string|same:newPassword'
             });
-
+        
             const matched = await v.check();
-
+        
             if (!matched) {
-                return res.status(400).json({ errors: v.errors });
+              return res.status(422).json({ message: 'Validation failed', errors: v.errors });
             }
-
-
-            const { email, password } = req.body;
-
+        
+            const { currentPassword,newPassword } = req.body;
+            const email = req.user.email; 
+        
             const existUser = await userRepositories.findUserByEmail(email);
-            if(!existUser){
-                return res.status(409).json({ message: 'user is not exist' });
-
-            }
             if (!existUser) {
-                return res.status(400).json({
-                    message: "user not exist",
-                    error:err.message||err
-                })
+              return res.status(404).json({ message: 'User does not exist' });
             }
-
-            const passMatch = await bcrypt.compare(password, existUser.password,);
-            
-            if (passMatch) {
-                return res.status(400).json({
-                    message: "Oldpassword and newPassword must not be same!!",
-                })
+        
+            const isCurrentPasswordCorrect = await bcrypt.compare(currentPassword, existUser.password);
+            if (!isCurrentPasswordCorrect) {
+              return res.status(400).json({ message: 'Current password is incorrect' });
             }
-
-            const bcryptPassword = await hashpassword(password);
-            
-            const updatePasword = await userRepositories.changedPassword(email,bcryptPassword);
-            
-            if(updatePasword){
-                res.status(200).json({
-                    message: "password has been changed successfully",
-                })
+        
+            const isSamePassword = await bcrypt.compare(newPassword, existUser.password);
+            if (isSamePassword) {
+              return res.status(400).json({
+                message: 'New password must be different from the current password'
+              });
             }
-          
-         
-
-        } catch (err) {
-            res.status(200).json({
-                message: "password is not change successfully",
-                error:err.message||err
-
-            })
-        }
+        
+            const hashedPassword = await hashpassword(newPassword);
+            const updatePassword = await userRepositories.changedPassword(email, hashedPassword);
+        
+            if (updatePassword) {
+              return res.status(200).json({ message: 'Password has been changed successfully' });
+            } else {
+              return res.status(500).json({ message: 'Password update failed' });
+            }
+        
+          } catch (err) {
+            return res.status(500).json({
+              message: 'Something went wrong',
+              error: err.message || err
+            });
+          }
     }
 
 
@@ -398,7 +388,7 @@ class userController{
             
             if(changedPassword){
                 return res.status(200).json({
-                    message: "Password cahnge successfully!!",
+                    message: "Password changed successfully!!",
                 })
             }
         }catch(err){
@@ -411,6 +401,33 @@ class userController{
         }
 
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     async getAllUser(req,res){
         try{

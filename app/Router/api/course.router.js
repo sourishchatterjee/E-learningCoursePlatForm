@@ -6,10 +6,24 @@ const courseImageUpload=require('../../Helper/uploadImage');
 const courseController = require('../../Module/courses/controller/course.controller');
 
 
-router.post('/createcourse',courseImageUpload.single('image'), courseController.createCourse);
-router.get('/getcourse/:id', courseController.getCourseById);
-router.post('/updatecourse/:id', courseImageUpload.single('image'),courseController.updateCourse);
+function multerErrorHandler(req, res, next) {
+    courseImageUpload.single('image')(req, res, function (err) {
+        if (err) {
+            return res.status(400).json({
+                message: err.message
+            });
+        }
+        next();
+    });
+}
+
+router.post('/createcourse',multerErrorHandler, courseController.createCourse);
+router.post('/updatecourse/:id',multerErrorHandler,courseController.updateCourse);
 router.get('/deletecourse/:id', courseController.deleteCourse);
 router.get('/getallcourses',courseController.getAllCourse);
+
+// get lesson for a particular course
+router.get('/getcourse/:id', courseController.getCourseById);
+
 
 module.exports = router;

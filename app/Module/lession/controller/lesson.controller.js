@@ -44,9 +44,18 @@ class lessonVideoController {
         });
       }
       
+
+
       const lessonData = await lessonRepositories.createLession({
         courseId, title, video, duration
       })
+
+      const addLessonToCourse=await lessonRepositories.pushLessonTOCourse(findCourse._id,lessonData._id);
+     
+      if(!addLessonToCourse){
+        return res.status(201).json({ message: 'lesson added unsucessful to this course', data: lessonData });
+
+      }
 
       if (lessonData) {
         return res.status(201).json({ message: 'lesson added successfully.', data: lessonData });
@@ -105,7 +114,7 @@ class lessonVideoController {
       // if data is not change
       if (existingVideo.title == title && existingVideo.duration == duration && !req.file) {
         return res.status(400).json({
-          message: "No data available to update!!"
+          message: "No data detect to update!!"
         })
       }
 
@@ -147,6 +156,9 @@ class lessonVideoController {
         if (fs.existsSync(videoPath)) {
           fs.unlinkSync(videoPath);
         }
+
+        await lessonRepositories.deleteLessonFromCourse(lessonId);
+
         return res.status(404).json({
           message: 'lesson has been deleted',
         });

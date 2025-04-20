@@ -41,6 +41,31 @@ class lessonRepositories{
 
   }
 
+// pushLessonTOCourse
+async pushLessonTOCourse(courseId,lessonId){
+  try {
+    const course = await courseModel.findById(courseId);
+    if (!course) {
+      throw new Error('Course not found');
+    }
+
+    course.lessons.push(lessonId);
+    return await course.save();
+
+  } catch (error) {
+    throw new Error(error.message);
+  }
+}
+
+// delete Lesson From Course
+
+async deleteLessonFromCourse(lessonId) {
+  return await courseModel.updateMany(
+    { lessons: lessonId },
+    { $pull: { lessons: lessonId } }
+  );
+}
+
 
 }
 
